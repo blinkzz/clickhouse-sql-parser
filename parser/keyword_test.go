@@ -86,6 +86,7 @@ func TestReservedKeywordInDisambiguatedPositions(t *testing.T) {
 		"SELECT * FROM t AS from",
 		"SELECT a FROM db.from",
 		"SELECT t.from FROM t",
+		"SELECT kill.id FROM events AS kill",
 		"SELECT a, limit FROM t",
 		"SELECT case;",
 		"SELECT limit",
@@ -102,6 +103,17 @@ func TestReservedKeywordInDisambiguatedPositions(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestReservedKeywordQualifiedNameUsesPath(t *testing.T) {
+	stmtExpr := parseOneStmt(t, "SELECT global.number FROM numbers(3) AS global")
+	stmt, ok := stmtExpr.(*SelectQuery)
+	require.True(t, ok, "statement should be a SelectQuery, got %T", stmtExpr)
+	path, ok := stmt.SelectItems[0].Expr.(*Path)
+	require.True(t, ok, "qualified name should be a Path, got %T", stmt.SelectItems[0].Expr)
+	require.Len(t, path.Fields, 2)
+	require.Equal(t, "global", path.Fields[0].Name)
+	require.Equal(t, "number", path.Fields[1].Name)
 }
 
 func TestExpressionContinuationDoesNotWeakenClauseParsing(t *testing.T) {
