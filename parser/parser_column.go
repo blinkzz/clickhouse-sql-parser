@@ -534,7 +534,7 @@ func (p *Parser) peekIsExpressionContinuation() bool {
 // queries like `SELECT a, limit FROM t` or `SELECT a, from, b FROM t`
 // without backtick escaping. Backticked identifiers are tokenized as
 // TokenKindIdent (not TokenKindKeyword), so trailing-comma handling for
-// keyword-named tables — e.g. `SELECT count(*), FROM `limit`` — is preserved.
+// keyword-named tables — e.g. `SELECT count(*), FROM `limit“ — is preserved.
 //
 // End-of-statement (EOF or `;`) is intentionally NOT included here. It's a
 // valid disambiguator only in expression position (the current keyword IS
@@ -565,8 +565,10 @@ func (p *Parser) isSelectItemTerminatorKeyword() bool {
 func (p *Parser) parseColumnExpr(pos Pos) (Expr, error) { //nolint:funlen
 	// A keyword followed by a dot is unambiguously the left side of a
 	// qualified column reference, even when it is otherwise reserved (for
-	// example, `kill.item_id`).
-	if p.matchTokenKind(TokenKindKeyword) && p.peekTokenKind(TokenKindDot) {
+	// example, `kill.item_id`). INTERVAL must reach its dedicated parser
+	// first because a dot can also start its numeric operand.
+	if !p.matchKeyword(KeywordInterval) &&
+		p.matchTokenKind(TokenKindKeyword) && p.peekTokenKind(TokenKindDot) {
 		return p.parseIdentOrFunction(pos)
 	}
 
